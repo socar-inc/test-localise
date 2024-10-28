@@ -1,0 +1,65 @@
+name: cdn-ci
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - ".github/**"
+    branches:
+      - "feature/*"
+
+env:
+  SLACK_ENABLED: "false"
+  AWS_S3_BUCKET_NAME: "react-template"
+  BUILD_UPLOAD: "false"
+  BUILD_OUTPUT: "build"
+  ACTION_PROTECT_TOKEN: ${{ secrets.SOCAR_TECH_GITHUB_TOKEN }}
+
+permissions: write-all
+
+jobs:
+  begin:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: socar-actions/begin 체크아웃 및 실행
+        uses: socar-inc/socar-actions/begin@v3
+        with:
+          slack-enabled: ${{ env.SLACK_ENABLED }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+  jira-check:
+    runs-on: ubuntu-22.04
+    needs: [begin]
+    steps:
+      - name: socar-actions/jira 체크아웃 및 jira 티켓 상태 확인
+        uses: socar-inc/socar-actions/jira@v3
+        with:
+          slack-enabled: ${{ env.SLACK_ENABLED }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          aws-iam-role-arn: ${{ secrets.AWS_DEV_IAM_ROLE }}
+          socar-tech-github-token: ${{ secrets.SOCAR_TECH_GITHUB_TOKEN }}
+  ci:
+    runs-on: ubuntu-22.04
+    needs: [jira-check]
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+      - name: Node.js 세팅
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+      - name: socar-actions/ci 체크아웃 및 실행
+        uses: socar-inc/socar-actions/ci-cdn@v3
+        env:
+          GIT_ACCESS_TOKEN: ${{ secrets.SOCAR_TECH_GITHUB_TOKEN }}
+        with:
+          name: ${{ env.AWS_S3_BUCKET_NAME }}
+          slack-enabled: ${{ env.SLACK_ENABLED }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          aws-iam-role-arn: ${{ secrets.AWS_DEV_IAM_ROLE }}
+          aws-s3-bucket-name: ${{ env.AWS_S3_BUCKET_NAME }}
+          build-cmds: |
+            echo "//npm.pkg.github.com/:_authToken=${GIT_ACCESS_TOKEN}" >> .npmrc
+            npm install
+            npm run build:dev
+          build-upload: ${{ env.BUILD_UPLOAD }}
+          build-output: ${{ env.BUILD_OUTPUT }}

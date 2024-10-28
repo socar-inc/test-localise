@@ -1,0 +1,83 @@
+name: cdn-cicd-prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      jira-ticket:
+        description: |
+          "운영 배포 시 CR 티켓을 입력해주세요. 만약 CR 티켓이 여러 개라면 '_' 로 연결하여 작성부탁드립니다.!"
+          "EX) 티켓이 하나일 경우 : CR-XX , 티켓이 두개 이상일 경우 : CR-XX_CR-YY_CR_ZZ"
+        required: true
+        default: "CR-XX"
+
+env:
+  SLACK_ENABLED: "true"
+  AWS_S3_BUCKET_NAME: "react-template"
+  AWS_CLOUDFRONT_DISTRIBUTION_ID: "XXXXXXXXXXXXXX"
+  BUILD_UPLOAD: "true"
+  BUILD_OUTPUT: "build"
+  ACTION_PROTECT_TOKEN: ${{ secrets.SOCAR_TECH_GITHUB_TOKEN }}
+
+permissions: write-all
+
+jobs:
+  begin:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: socar-actions/begin 체크아웃 및 실행
+        uses: socar-inc/socar-actions/begin@v3
+        with:
+          slack-enabled: ${{ env.SLACK_ENABLED }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+  jira-check:
+    runs-on: ubuntu-22.04
+    needs: [begin]
+    steps:
+      - name: socar-actions/jira 체크아웃 및 jira 티켓 상태 확인
+        uses: socar-inc/socar-actions/jira@v3
+        with:
+          slack-enabled: ${{ env.SLACK_ENABLED }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          aws-iam-role-arn: ${{ secrets.AWS_PROD_IAM_ROLE }}
+          socar-tech-github-token: ${{ secrets.SOCAR_TECH_GITHUB_TOKEN }}
+          jira-ticket: ${{ github.event.inputs.jira-ticket }}
+  ci:
+    runs-on: ubuntu-20.04
+    needs: [jira-check]
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+      - name: Node.js 세팅
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+      - name: socar-actions/ci 체크아웃 및 실행
+        uses: socar-inc/socar-actions/ci-cdn@v3
+        env:
+          GIT_ACCESS_TOKEN: ${{ secrets.SOCAR_TECH_GITHUB_TOKEN }}
+        with:
+          name: ${{ env.AWS_S3_BUCKET_NAME }}
+          slack-enabled: ${{ env.SLACK_ENABLED }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          aws-iam-role-arn: ${{ secrets.AWS_PROD_IAM_ROLE }}
+          aws-s3-bucket-name: ${{ env.AWS_S3_BUCKET_NAME }}
+          build-cmds: |
+            echo "//npm.pkg.github.com/:_authToken=${GIT_ACCESS_TOKEN}" >> .npmrc
+            npm install
+            npm run build:prod
+          build-upload: ${{ env.BUILD_UPLOAD }}
+          build-output: ${{ env.BUILD_OUTPUT }}
+  cd:
+    runs-on: ubuntu-22.04
+    needs: [ci]
+    steps:
+      - name: socar-actions/cd 체크아웃 및 실행
+        uses: socar-inc/socar-actions/cd-cdn@v3
+        with:
+          name: ${{ env.AWS_S3_BUCKET_NAME }}
+          slack-enabled: ${{ env.SLACK_ENABLED }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          audit-slack-webhook-url: ${{ secrets.PROD_AUDIT_SLACK_WEBHOOK_URL }}
+          aws-iam-role-arn: ${{ secrets.AWS_PROD_IAM_ROLE }}
+          aws-s3-bucket-name: ${{ env.AWS_S3_BUCKET_NAME }}
+          aws-cloudfront-distribution-id: ${{ env.AWS_CLOUDFRONT_DISTRIBUTION_ID }}

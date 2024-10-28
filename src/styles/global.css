@@ -1,0 +1,5 @@
+@import "@socar-inc/frontend-design-system/dist/style.min.css";
+
+html {
+  font-size: 16px;
+}

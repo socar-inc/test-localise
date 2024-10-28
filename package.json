@@ -1,0 +1,57 @@
+{
+  "name": "react-template",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --mode development",
+    "dev:stage": "vite --mode staging",
+    "dev:prod": "vite --mode production",
+    "postinstall": "husky install",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "build:dev": "tsc && vite build --mode development",
+    "build:stage": "tsc && vite build --mode staging",
+    "build:prod": "tsc && vite build --mode production",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "check-types": "tsc",
+    "format": "prettier --cache --write .",
+    "prettier": "prettier --ignore-path .gitignore --write \"**/*.+(js|jsx|ts|tsx|css|scss|md|json)\"",
+    "download-messages": "lokalise2 --token 9f6f56ce1680bc32a004c544fb5670adae4f4aee --project-id 5679604561c18409d4c193.43817726 file download --format json --json-unescaped-slashes --replace-breaks=false --include-tags ${TAG_NAME} --unzip-to ./src/libs/locales"
+  },
+  "dependencies": {
+    "@socar-inc/frontend-design-system": "0.16.15",
+    "@socar-inc/web-frontend-libraries": "1.1.10",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "18.2.15",
+    "@types/react-dom": "18.2.7",
+    "@typescript-eslint/eslint-plugin": "6.0.0",
+    "@typescript-eslint/parser": "6.0.0",
+    "@vitejs/plugin-legacy": "5.2.0",
+    "@vitejs/plugin-react-swc": "^3.3.2",
+    "prettier": "3.2.5",
+    "eslint": "8.45.0",
+    "eslint-plugin-react-hooks": "4.6.0",
+    "eslint-plugin-react-refresh": "0.4.5",
+    "husky": "7.0.4",
+    "lint-staged": "12.3.4",
+    "terser": "5.26.0",
+    "typescript": "5.0.2",
+    "vite": "5.0.10",
+    "vitest": "1.1.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --cache --write",
+      "eslint --cache --fix --max-warnings=0"
+    ]
+  },
+  "engines": {
+    "node": ">=20.11.1",
+    "npm": ">=10.2.4"
+  }
+}
